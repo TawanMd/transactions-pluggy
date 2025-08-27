@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Integração Pluggy API</title>
+		<meta charset="UTF-8" />
+		<style>
+			table {
+				border-collapse: collapse;
+				width: 100%;
+				margin-top: 20px;
+			}
+			th,
+			td {
+				border: 1px solid #ddd;
+				padding: 8px;
+			}
+			th {
+				background-color: #f2f2f2;
+			}
+			#loadButton {
+				padding: 10px 20px;
+				font-size: 16px;
+			}
+		</style>
+	</head>
+	<body>
+		<button id="loadButton">Carregar Integração</button>
+		<table id="transactionsTable">
+			<thead>
+				<tr>
+					<th>Dt Lançamento</th>
+					<th>Data UTC-3</th>
+					<th>Débito</th>
+					<th>Crédito</th>
+					<th>Histórico</th>
+					<th>Beneficiário</th>
+					<th>Saldo</th>
+					<th>PaymentData</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+
+		<script>
+			const loadButton = document.getElementById("loadButton");
+			const transactionsTableBody = document.querySelector("#transactionsTable tbody");
+
+			loadButton.addEventListener("click", function () {
+				// Autenticação para obter o apiKey
+				const authUrl = "https://api.pluggy.ai/auth";
+				const clientId = "9242be1b-daf8-48ea-a847-370719612fc1";
+				const clientSecret = "036d9e30-0bc1-45e9-a3c5-50f1bd7338ef";
+
+				fetch(authUrl, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						accept: "application/json",
+					},
+					body: JSON.stringify({
+						clientId: clientId,
+						clientSecret: clientSecret,
+					}),
+				})
+					.then((response) => response.json())
+					.then((data) => {
+						const apiKey = data.apiKey;
+
+						const accountId = "beee12d7-6352-4320-8ab6-d72e93c17765	";
+						const fromDate = "2025-05-31";
+						const toDate = "2025-06-31";
+
+						fetchAllTransactions(apiKey, accountId, fromDate, toDate)
+							.then((transactions) => {
+								// Processa as transações
+								transactionsTableBody.innerHTML = "";
+								transactions.forEach((transaction) => {
+									const row = document.createElement("tr");
+
+									// Dt Lançamento
+									const dateCell = document.createElement("td");
+									dateCell.textContent = new Date(transaction.date).toLocaleDateString("pt-BR");
+									row.appendChild(dateCell);
+
+									// Data UTC-3
+									const dateUtc3Cell = document.createElement("td");
+									const date = new Date(transaction.date);
+									const options = {
+										timeZone: "America/Sao_Paulo", // UTC-3
+										year: "numeric",
+										month: "2-digit",
+										day: "2-digit",
+										hour: "2-digit",
+										minute: "2-digit",
+										second: "2-digit",
+									};
+									dateUtc3Cell.textContent = date.toLocaleString("pt-BR", options);
+									row.appendChild(dateUtc3Cell);
+
+									// Débito e Crédito
+									const debitCell = document.createElement("td");
+									const creditCell = document.createElement("td");
+
+									if (transaction.amount < 0) {
+										debitCell.textContent = (-transaction.amount).toFixed(2);
+										creditCell.textContent = "";
+									} else {
+										debitCell.textContent = "";
+										creditCell.textContent = transaction.amount.toFixed(2);
+									}
+									row.appendChild(debitCell);
+									row.appendChild(creditCell);
+
+									// Histórico
+									const descriptionCell = document.createElement("td");
+									descriptionCell.textContent = transaction.description;
+									row.appendChild(descriptionCell);
+
+									// Beneficiário
+									const beneficiaryCell = document.createElement("td");
+									let beneficiaryName = "";
+
+									if (transaction.paymentData) {
+										if (transaction.paymentData.receiver && transaction.paymentData.receiver.name) {
+											beneficiaryName = transaction.paymentData.receiver.name;
+										} else if (transaction.paymentData.payer && transaction.paymentData.payer.name) {
+											beneficiaryName = transaction.paymentData.payer.name;
+										}
+									} else if (transaction.merchant && transaction.merchant.name) {
+										beneficiaryName = transaction.merchant.name;
+									}
+
+									beneficiaryCell.textContent = beneficiaryName;
+									row.appendChild(beneficiaryCell);
+
+									// Saldo
+									const balanceCell = document.createElement("td");
+									if (transaction.balance == null) {
+										balanceCell.textContent = "";
+									} else {
+										balanceCell.textContent = transaction.balance.toFixed(2);
+									}
+									row.appendChild(balanceCell);
+
+									// PaymentData
+									const paymentDataCell = document.createElement("td");
+
+									if (transaction.paymentData) {
+										if (transaction.paymentData.receiver && transaction.paymentData.receiver.documentNumber) {
+											paymentDataCell.textContent =
+												"Tem: " + transaction.paymentData.receiver.documentNumber.value;
+										} else {
+											paymentDataCell.textContent = "Recebedor null";
+										}
+									} else {
+										paymentDataCell.textContent = "Não tem PaymentData";
+									}
+
+									row.appendChild(paymentDataCell);
+
+									transactionsTableBody.appendChild(row);
+								});
+							})
+							.catch((error) => {
+								console.error("Erro ao obter transações:", error);
+							});
+					})
+					.catch((error) => {
+						console.error("Erro durante a autenticação:", error);
+					});
+			});
+
+			function fetchAllTransactions(apiKey, accountId, fromDate, toDate) {
+				let transactions = [];
+				let currentPage = 1;
+				let totalPages = 1;
+
+				function fetchPage(page) {
+					const transactionsUrl = `https://api.pluggy.ai/transactions?accountId=${accountId}&from=${fromDate}&to=${toDate}&page=${page}`;
+					return fetch(transactionsUrl, {
+						method: "GET",
+						headers: {
+							accept: "application/json",
+							"x-api-key": apiKey,
+						},
+					})
+						.then((response) => response.json())
+						.then((data) => {
+							transactions = transactions.concat(data.results);
+							totalPages = data.totalPages;
+							if (currentPage < totalPages) {
+								currentPage++;
+								return fetchPage(currentPage);
+							} else {
+								return transactions;
+							}
+						});
+				}
+
+				return fetchPage(currentPage);
+			}
+		</script>
+	</body>
+</html>

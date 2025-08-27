@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Consulta de Transações</title>
+    <meta charset="UTF-8" />
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            background-color: #FFFFFF;
+            color: #000000;
+        }
+        .container {
+            padding: 2em;
+        }
+        h1 {
+            color: #00529C;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 400px;
+            margin-bottom: 30px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        form div {
+            display: flex;
+            flex-direction: column;
+        }
+        input {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #00529C;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #003d75;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #00529C;
+            color: white;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // Proteção de rota simples: verifica se o usuário está autenticado
+        if (sessionStorage.getItem('isAuthenticated') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <div class="container">
+        <h1>Consulta de Transações</h1>
+        <form id="searchForm">
+            <div>
+                <label for="accountId">Account ID:</label>
+                <input type="text" id="accountId" name="accountId" required />
+            </div>
+            <div>
+                <label for="fromDate">Data de Início:</label>
+                <input type="date" id="fromDate" name="fromDate" required />
+            </div>
+            <div>
+                <label for="toDate">Data de Fim:</label>
+                <input type="date" id="toDate" name="toDate" required />
+            </div>
+            <button type="submit" id="loadButton">Consultar</button>
+        </form>
+
+        <div id="loadingMessage" class="loading" style="display: none;">Carregando...</div>
+
+        <table id="transactionsTable">
+        <thead>
+            <tr>
+                <th>Dt Lançamento</th>
+                <th>Data UTC-3</th>
+                <th>Débito</th>
+                <th>Crédito</th>
+                <th>Histórico</th>
+                <th>Beneficiário</th>
+                <th>Saldo</th>
+                <th>PaymentData</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    </div>
+    <script>
+        // --- Configuração de Ambiente ---
+        // Após o deploy do backend, cole a URL do Render aqui
+        const PROD_API_URL = 'https://SEU-BACKEND.onrender.com';
+        const DEV_API_URL = 'http://localhost:3000';
+        const API_URL = window.location.protocol === 'file:' ? DEV_API_URL : PROD_API_URL;
+        // --------------------------------
+
+        const searchForm = document.getElementById('searchForm');
+        const transactionsTableBody = document.querySelector('#transactionsTable tbody');
+        const loadButton = document.getElementById('loadButton');
+        const loadingMessage = document.getElementById('loadingMessage');
+
+        searchForm.addEventListener('submit', function (event) {
+            event.preventDefault(); // Impede o recarregamento da página
+
+            const accountId = document.getElementById('accountId').value;
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            // Mostra mensagem de loading e desabilita o botão
+            loadingMessage.style.display = 'block';
+            loadButton.disabled = true;
+            transactionsTableBody.innerHTML = '';
+
+            fetch(`${API_URL}/api/transactions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ accountId, fromDate, toDate }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('A resposta da rede não foi OK');
+                }
+                return response.json();
+            })
+            .then(transactions => {
+                renderTransactions(transactions);
+            })
+            .catch(error => {
+                console.error('Erro ao buscar transações:', error);
+                transactionsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: red;">Falha ao carregar transações. Verifique o console.</td></tr>`;
+            })
+            .finally(() => {
+                // Esconde a mensagem de loading e reabilita o botão
+                loadingMessage.style.display = 'none';
+                loadButton.disabled = false;
+            });
+        });
+
+        function renderTransactions(transactions) {
+            transactionsTableBody.innerHTML = ''; // Limpa a tabela
+
+            if (transactions.length === 0) {
+                transactionsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Nenhuma transação encontrada para o período.</td></tr>`;
+                return;
+            }
+
+            transactions.forEach(transaction => {
+                const row = document.createElement('tr');
+
+                // Dt Lançamento
+                const dateCell = document.createElement('td');
+                dateCell.textContent = new Date(transaction.date).toLocaleDateString('pt-BR');
+                row.appendChild(dateCell);
+
+                // Data UTC-3
+                const dateUtc3Cell = document.createElement('td');
+                const date = new Date(transaction.date);
+                const options = {
+                    timeZone: 'America/Sao_Paulo', // UTC-3
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                };
+                dateUtc3Cell.textContent = date.toLocaleString('pt-BR', options);
+                row.appendChild(dateUtc3Cell);
+
+                // Débito e Crédito
+                const debitCell = document.createElement('td');
+                const creditCell = document.createElement('td');
+                if (transaction.amount < 0) {
+                    debitCell.textContent = (-transaction.amount).toFixed(2);
+                    creditCell.textContent = '';
+                } else {
+                    debitCell.textContent = '';
+                    creditCell.textContent = transaction.amount.toFixed(2);
+                }
+                row.appendChild(debitCell);
+                row.appendChild(creditCell);
+
+                // Histórico
+                const descriptionCell = document.createElement('td');
+                descriptionCell.textContent = transaction.description;
+                row.appendChild(descriptionCell);
+
+                // Beneficiário
+                const beneficiaryCell = document.createElement('td');
+                let beneficiaryName = '';
+                if (transaction.paymentData) {
+                    if (transaction.paymentData.receiver && transaction.paymentData.receiver.name) {
+                        beneficiaryName = transaction.paymentData.receiver.name;
+                    } else if (transaction.paymentData.payer && transaction.paymentData.payer.name) {
+                        beneficiaryName = transaction.paymentData.payer.name;
+                    }
+                } else if (transaction.merchant && transaction.merchant.name) {
+                    beneficiaryName = transaction.merchant.name;
+                }
+                beneficiaryCell.textContent = beneficiaryName;
+                row.appendChild(beneficiaryCell);
+
+                // Saldo
+                const balanceCell = document.createElement('td');
+                balanceCell.textContent = transaction.balance != null ? transaction.balance.toFixed(2) : '';
+                row.appendChild(balanceCell);
+
+                // PaymentData
+                const paymentDataCell = document.createElement('td');
+                if (transaction.paymentData && transaction.paymentData.receiver && transaction.paymentData.receiver.documentNumber) {
+                    paymentDataCell.textContent = `Tem: ${transaction.paymentData.receiver.documentNumber.value}`;
+                } else {
+                    paymentDataCell.textContent = 'Não tem PaymentData';
+                }
+                row.appendChild(paymentDataCell);
+
+                transactionsTableBody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
