@@ -3,71 +3,172 @@
 <head>
     <title>Consulta de Transações</title>
     <meta charset="UTF-8" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            background-color: #FFFFFF;
-            color: #000000;
+        :root {
+            --primary-color: #00529C;
+            --secondary-color: #003d75;
+            --background-color: #f4f7f9;
+            --text-color: #333;
+            --white-color: #FFFFFF;
+            --border-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --success-color: #28a745;
+            --danger-color: #dc3545;
         }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
         .container {
             padding: 2em;
+            max-width: 1200px;
+            margin: 0 auto;
         }
+
         h1 {
-            color: #00529C;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 1em;
         }
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-width: 400px;
-            margin-bottom: 30px;
-            background-color: #f9f9f9;
-            padding: 20px;
+
+        .form-container {
+            background-color: var(--white-color);
+            padding: 25px;
             border-radius: 8px;
-            border: 1px solid #e0e0e0;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            margin-bottom: 30px;
         }
+
+        form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
+        }
+
         form div {
             display: flex;
             flex-direction: column;
         }
-        input {
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+
+        label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--secondary-color);
         }
+
+        input[type="text"],
+        input[type="date"] {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 82, 156, 0.2);
+        }
+
         button {
             padding: 12px 20px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            background-color: #00529C;
-            color: white;
+            background-color: var(--primary-color);
+            color: var(--white-color);
             border: none;
             border-radius: 4px;
             transition: background-color 0.3s;
+            height: 48px; /* Align with inputs */
         }
+
         button:hover {
-            background-color: #003d75;
+            background-color: var(--secondary-color);
         }
+
+        button:disabled {
+            background-color: #a0a0a0;
+            cursor: not-allowed;
+        }
+
+        .filters {
+            margin-top: 20px;
+        }
+
+        #filterInput {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
         table {
             border-collapse: collapse;
             width: 100%;
             margin-top: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            background-color: var(--white-color);
+            border-radius: 8px;
+            overflow: hidden;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
+
+        th,
+        td {
+            padding: 15px;
             text-align: left;
+            border-bottom: 1px solid var(--border-color);
         }
+
         th {
-            background-color: #00529C;
-            color: white;
+            background-color: var(--primary-color);
+            color: var(--white-color);
+            cursor: pointer;
+            position: relative;
         }
+
+        th .sort-icon {
+            margin-left: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            transition: color 0.3s;
+        }
+        
+        th:hover .sort-icon {
+            color: var(--white-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
         .loading {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
             font-size: 1.2em;
+            color: var(--secondary-color);
+        }
+
+        .value-positive {
+            color: var(--success-color);
+            font-weight: 600;
+        }
+
+        .value-negative {
+            color: var(--danger-color);
+            font-weight: 600;
         }
     </style>
 </head>
@@ -80,131 +181,222 @@
     </script>
     <div class="container">
         <h1>Consulta de Transações</h1>
-        <form id="searchForm">
-            <div>
-                <label for="accountId">Account ID:</label>
-                <input type="text" id="accountId" name="accountId" required />
+        <div class="form-container">
+            <form id="searchForm">
+                <div>
+                    <label for="accountId">Account ID:</label>
+                    <input type="text" id="accountId" name="accountId" required />
+                </div>
+                <div>
+                    <label for="fromDate">Data de Início:</label>
+                    <input type="date" id="fromDate" name="fromDate" required />
+                </div>
+                <div>
+                    <label for="toDate">Data de Fim:</label>
+                    <input type="date" id="toDate" name="toDate" required />
+                </div>
+                <button type="submit" id="loadButton">Consultar</button>
+            </form>
+            <div class="filters">
+                <label for="filterInput">Filtrar resultados:</label>
+                <input type="text" id="filterInput" placeholder="Digite para filtrar por histórico, beneficiário, etc.">
             </div>
-            <div>
-                <label for="fromDate">Data de Início:</label>
-                <input type="date" id="fromDate" name="fromDate" required />
-            </div>
-            <div>
-                <label for="toDate">Data de Fim:</label>
-                <input type="date" id="toDate" name="toDate" required />
-            </div>
-            <button type="submit" id="loadButton">Consultar</button>
-        </form>
+        </div>
 
         <div id="loadingMessage" class="loading" style="display: none;">Carregando...</div>
 
-        <table id="transactionsTable">
-        <thead>
-            <tr>
-                <th>Dt Lançamento</th>
-                <th>Data UTC-3</th>
-                <th>Débito</th>
-                <th>Crédito</th>
-                <th>Histórico</th>
-                <th>Beneficiário</th>
-                <th>Saldo</th>
-                <th>PaymentData</th>
-            </tr>
-        </thead>
+        <table id="transactionsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th data-column="date">Data Original <i class="fas fa-sort sort-icon"></i></th>
+                    <th data-column="dateUtc3">Data UTC-3 <i class="fas fa-sort sort-icon"></i></th>
+                    <th data-column="amount">Valor <i class="fas fa-sort sort-icon"></i></th>
+                    <th data-column="description">Histórico <i class="fas fa-sort sort-icon"></i></th>
+                    <th data-column="beneficiary">Beneficiário <i class="fas fa-sort sort-icon"></i></th>
+                    <th data-column="balance">Saldo <i class="fas fa-sort sort-icon"></i></th>
+                    <th data-column="paymentData">PaymentData <i class="fas fa-sort sort-icon"></i></th>
+                </tr>
+            </thead>
         <tbody></tbody>
     </table>
     </div>
     <script>
         // --- Configuração de Ambiente ---
-        // Após o deploy do backend, cole a URL do Render aqui
         const PROD_API_URL = 'https://transactions-pluggy.onrender.com';
         const DEV_API_URL = 'http://localhost:3000';
-        const API_URL = window.location.protocol === 'file:' ? DEV_API_URL : PROD_API_URL;
+        const API_URL = window.location.hostname === 'localhost' || window.location.protocol === 'file:' ? DEV_API_URL : PROD_API_URL;
         // --------------------------------
 
         const searchForm = document.getElementById('searchForm');
-        const transactionsTableBody = document.querySelector('#transactionsTable tbody');
+        const transactionsTable = document.getElementById('transactionsTable');
+        const transactionsTableBody = transactionsTable.querySelector('tbody');
         const loadButton = document.getElementById('loadButton');
         const loadingMessage = document.getElementById('loadingMessage');
+        const filterInput = document.getElementById('filterInput');
 
-        searchForm.addEventListener('submit', function (event) {
-            event.preventDefault(); // Impede o recarregamento da página
+        let allTransactions = [];
+        let sortState = {
+            column: 'date',
+            direction: 'desc'
+        };
 
+        searchForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
             const accountId = document.getElementById('accountId').value;
             const fromDate = document.getElementById('fromDate').value;
             const toDate = document.getElementById('toDate').value;
 
-            // Mostra mensagem de loading e desabilita o botão
             loadingMessage.style.display = 'block';
             loadButton.disabled = true;
+            transactionsTable.style.display = 'none';
             transactionsTableBody.innerHTML = '';
 
-            fetch(`${API_URL}/api/transactions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ accountId, fromDate, toDate }),
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('A resposta da rede não foi OK');
-                }
-                return response.json();
-            })
-            .then(transactions => {
-                renderTransactions(transactions);
-            })
-            .catch(error => {
+            try {
+                const response = await fetch(`${API_URL}/api/transactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accountId, fromDate, toDate }),
+                });
+                if (!response.ok) throw new Error('A resposta da rede não foi OK');
+                
+                allTransactions = await response.json();
+                sortAndRenderTransactions();
+                transactionsTable.style.display = 'table';
+
+            } catch (error) {
                 console.error('Erro ao buscar transações:', error);
-                transactionsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: red;">Falha ao carregar transações. Verifique o console.</td></tr>`;
-            })
-            .finally(() => {
-                // Esconde a mensagem de loading e reabilita o botão
+                transactionsTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: red;">Falha ao carregar transações. Verifique o console.</td></tr>`;
+                transactionsTable.style.display = 'table';
+            } finally {
                 loadingMessage.style.display = 'none';
                 loadButton.disabled = false;
-            });
+            }
         });
 
+        filterInput.addEventListener('input', () => {
+            sortAndRenderTransactions();
+        });
+
+        document.querySelectorAll('#transactionsTable th').forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.dataset.column;
+                if (sortState.column === column) {
+                    sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortState.column = column;
+                    sortState.direction = 'asc';
+                }
+                sortAndRenderTransactions();
+                updateSortIcons();
+            });
+        });
+        
+        function updateSortIcons() {
+            document.querySelectorAll('#transactionsTable th').forEach(header => {
+                const icon = header.querySelector('.sort-icon');
+                if (header.dataset.column === sortState.column) {
+                    icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+                    icon.classList.add(sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+                } else {
+                    icon.classList.remove('fa-sort-up', 'fa-sort-down');
+                    icon.classList.add('fa-sort');
+                }
+            });
+        }
+
+        function sortAndRenderTransactions() {
+            let filteredTransactions = filterTransactions(allTransactions);
+            let sortedTransactions = sortTransactions(filteredTransactions);
+            renderTransactions(sortedTransactions);
+        }
+
+        function filterTransactions(transactions) {
+            const filterText = filterInput.value.toLowerCase();
+            if (!filterText) return transactions;
+
+            return transactions.filter(t => {
+                const beneficiaryName = getBeneficiaryName(t).toLowerCase();
+                return t.description.toLowerCase().includes(filterText) ||
+                       beneficiaryName.includes(filterText);
+            });
+        }
+
+        function sortTransactions(transactions) {
+            return [...transactions].sort((a, b) => {
+                let valA, valB;
+
+                switch (sortState.column) {
+                    case 'date':
+                    case 'dateUtc3':
+                        valA = new Date(a.date);
+                        valB = new Date(b.date);
+                        break;
+                    case 'amount':
+                        valA = a.amount;
+                        valB = b.amount;
+                        break;
+                    case 'balance':
+                        valA = a.balance;
+                        valB = b.balance;
+                        break;
+                    case 'description':
+                        valA = a.description.toLowerCase();
+                        valB = b.description.toLowerCase();
+                        break;
+                    case 'beneficiary':
+                        valA = getBeneficiaryName(a).toLowerCase();
+                        valB = getBeneficiaryName(b).toLowerCase();
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (valA < valB) return sortState.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortState.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        
+        function getBeneficiaryName(transaction) {
+            if (transaction.paymentData) {
+                if (transaction.paymentData.receiver && transaction.paymentData.receiver.name) return transaction.paymentData.receiver.name;
+                if (transaction.paymentData.payer && transaction.paymentData.payer.name) return transaction.paymentData.payer.name;
+            }
+            if (transaction.merchant && transaction.merchant.name) return transaction.merchant.name;
+            return '';
+        }
+
         function renderTransactions(transactions) {
-            transactionsTableBody.innerHTML = ''; // Limpa a tabela
+            transactionsTableBody.innerHTML = '';
 
             if (transactions.length === 0) {
-                transactionsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Nenhuma transação encontrada para o período.</td></tr>`;
+                transactionsTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhuma transação encontrada.</td></tr>`;
                 return;
             }
 
             transactions.forEach(transaction => {
                 const row = document.createElement('tr');
+                const date = new Date(transaction.date);
 
-                // Dt Lançamento
+                // Data Original
                 const dateCell = document.createElement('td');
-                dateCell.textContent = new Date(transaction.date).toLocaleDateString('pt-BR');
+                dateCell.textContent = date.toLocaleDateString('pt-BR');
                 row.appendChild(dateCell);
 
                 // Data UTC-3
                 const dateUtc3Cell = document.createElement('td');
-                const date = new Date(transaction.date);
-                const options = {
-                    timeZone: 'America/Sao_Paulo', // UTC-3
+                dateUtc3Cell.textContent = date.toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
                     year: 'numeric', month: '2-digit', day: '2-digit',
                     hour: '2-digit', minute: '2-digit', second: '2-digit',
-                };
-                dateUtc3Cell.textContent = date.toLocaleString('pt-BR', options);
+                });
                 row.appendChild(dateUtc3Cell);
 
-                // Débito e Crédito
-                const debitCell = document.createElement('td');
-                const creditCell = document.createElement('td');
-                if (transaction.amount < 0) {
-                    debitCell.textContent = (-transaction.amount).toFixed(2);
-                    creditCell.textContent = '';
-                } else {
-                    debitCell.textContent = '';
-                    creditCell.textContent = transaction.amount.toFixed(2);
-                }
-                row.appendChild(debitCell);
-                row.appendChild(creditCell);
+                // Valor (unificado)
+                const amountCell = document.createElement('td');
+                amountCell.textContent = transaction.amount.toFixed(2);
+                amountCell.className = transaction.amount < 0 ? 'value-negative' : 'value-positive';
+                row.appendChild(amountCell);
 
                 // Histórico
                 const descriptionCell = document.createElement('td');
@@ -213,17 +405,7 @@
 
                 // Beneficiário
                 const beneficiaryCell = document.createElement('td');
-                let beneficiaryName = '';
-                if (transaction.paymentData) {
-                    if (transaction.paymentData.receiver && transaction.paymentData.receiver.name) {
-                        beneficiaryName = transaction.paymentData.receiver.name;
-                    } else if (transaction.paymentData.payer && transaction.paymentData.payer.name) {
-                        beneficiaryName = transaction.paymentData.payer.name;
-                    }
-                } else if (transaction.merchant && transaction.merchant.name) {
-                    beneficiaryName = transaction.merchant.name;
-                }
-                beneficiaryCell.textContent = beneficiaryName;
+                beneficiaryCell.textContent = getBeneficiaryName(transaction);
                 row.appendChild(beneficiaryCell);
 
                 // Saldo
@@ -243,6 +425,9 @@
                 transactionsTableBody.appendChild(row);
             });
         }
+        
+        // Initial sort icon setup
+        updateSortIcons();
     </script>
 </body>
 </html>
